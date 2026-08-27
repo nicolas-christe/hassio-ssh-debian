@@ -1,0 +1,155 @@
+#!/command/with-contenv bashio
+# vim: ft=bash
+# shellcheck shell=bash
+# ==============================================================================
+# Restore persisted account state, ensure the primary user exists, apply
+# add-on config (authorized_keys), and render smb.conf. Samba passwords for
+# every user — including the primary one — are set manually over SSH with
+# smbpasswd, same as any other account; see persist-accounts.
+# ==============================================================================
+declare hostname
+declare workgroup
+export HOSTNAME
+
+readonly HOME_ROOT=/share/linux-box/home
+readonly DATA_ACCOUNTS=/data/accounts
+readonly SAMBA_PRIVATE=/var/lib/samba/private
+readonly SSH_HOST_KEYS=/data/ssh_host_keys
+readonly PRIMARY_USER=nicolas
+
+mkdir -p "${HOME_ROOT}" "${DATA_ACCOUNTS}" "${DATA_ACCOUNTS}/samba-private" "${SSH_HOST_KEYS}"
+
+# ------------------------------------------------------------------------
+# Restore persisted human accounts (uid/gid >= 1000) from a previous boot.
+# This only ever ADDS lines for names missing from the current /etc files —
+# it never overwrites them — so a newer base image's system accounts
+# (e.g. sshd's privsep user) are never clobbered by an older snapshot.
+# ------------------------------------------------------------------------
+if [[ -f "${DATA_ACCOUNTS}/human-passwd" ]]; then
+    bashio::log.info "Restoring persisted user accounts..."
+    while IFS= read -r line; do
+        [[ -z "${line}" ]] && continue
+        name="${line%%:*}"
+        getent passwd "${name}" >/dev/null 2>&1 || echo "${line}" >> /etc/passwd
+    done < "${DATA_ACCOUNTS}/human-passwd"
+
+    while IFS= read -r line; do
+        [[ -z "${line}" ]] && continue
+        name="${line%%:*}"
+        grep -q "^${name}:" /etc/shadow 2>/dev/null || echo "${line}" >> /etc/shadow
+    done < "${DATA_ACCOUNTS}/human-shadow"
+
+    while IFS= read -r line; do
+        [[ -z "${line}" ]] && continue
+        name="${line%%:*}"
+        getent group "${name}" >/dev/null 2>&1 || echo "${line}" >> /etc/group
+    done < "${DATA_ACCOUNTS}/human-group"
+
+    while IFS= read -r line; do
+        [[ -z "${line}" ]] && continue
+        name="${line%%:*}"
+        grep -q "^${name}:" /etc/gshadow 2>/dev/null || echo "${line}" >> /etc/gshadow
+    done < "${DATA_ACCOUNTS}/human-gshadow"
+fi
+
+if [[ -f "${DATA_ACCOUNTS}/sudo-users" ]]; then
+    while IFS= read -r user; do
+        [[ -z "${user}" ]] && continue
+        id "${user}" >/dev/null 2>&1 && usermod -aG sudo "${user}"
+    done < "${DATA_ACCOUNTS}/sudo-users"
+fi
+
+if [[ -n "$(ls -A "${DATA_ACCOUNTS}/samba-private" 2>/dev/null)" ]]; then
+    cp -a "${DATA_ACCOUNTS}/samba-private/." "${SAMBA_PRIVATE}/"
+fi
+
+# ------------------------------------------------------------------------
+# SSH host keys: generate once, persist forever (avoids host-key-changed
+# warnings on the Mac after every add-on update)
+# ------------------------------------------------------------------------
+if ls "${SSH_HOST_KEYS}"/ssh_host_* >/dev/null 2>&1; then
+    bashio::log.info "Restoring SSH host keys..."
+    cp -fp "${SSH_HOST_KEYS}"/* /etc/ssh/
+else
+    bashio::log.info "Generating SSH host keys..."
+    ssh-keygen -A || bashio::exit.nok "Failed to create SSH host keys!"
+    cp -fp /etc/ssh/ssh_host* "${SSH_HOST_KEYS}/"
+fi
+
+# ------------------------------------------------------------------------
+# Ensure the primary user exists (first boot only — afterwards it's
+# restored above like any other account)
+# ------------------------------------------------------------------------
+if ! id "${PRIMARY_USER}" &>/dev/null; then
+    bashio::log.info "Creating user ${PRIMARY_USER}..."
+    useradd \
+        --create-home --home-dir "${HOME_ROOT}/${PRIMARY_USER}" \
+        --shell /bin/bash --groups sudo \
+        "${PRIMARY_USER}" \
+        || bashio::exit.nok "Failed to create user ${PRIMARY_USER}"
+    passwd -l "${PRIMARY_USER}" >/dev/null
+fi
+
+usermod -aG sudo "${PRIMARY_USER}"
+
+mkdir -p "${HOME_ROOT}/${PRIMARY_USER}/.ssh"
+chown "${PRIMARY_USER}:${PRIMARY_USER}" "${HOME_ROOT}/${PRIMARY_USER}" "${HOME_ROOT}/${PRIMARY_USER}/.ssh"
+chmod 700 "${HOME_ROOT}/${PRIMARY_USER}/.ssh"
+
+echo "${PRIMARY_USER} ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/${PRIMARY_USER}"
+chmod 440 "/etc/sudoers.d/${PRIMARY_USER}"
+
+# ------------------------------------------------------------------------
+# Authorized keys for the primary user, from add-on config
+# ------------------------------------------------------------------------
+if bashio::config.has_value 'authorized_keys'; then
+    bashio::log.info "Setting up authorized_keys for ${PRIMARY_USER}..."
+    : > "${HOME_ROOT}/${PRIMARY_USER}/.ssh/authorized_keys"
+    while read -r line; do
+        [[ -z "${line}" ]] && continue
+        echo "${line}" >> "${HOME_ROOT}/${PRIMARY_USER}/.ssh/authorized_keys"
+    done <<< "$(bashio::config 'authorized_keys')"
+    chown "${PRIMARY_USER}:${PRIMARY_USER}" "${HOME_ROOT}/${PRIMARY_USER}/.ssh/authorized_keys"
+    chmod 600 "${HOME_ROOT}/${PRIMARY_USER}/.ssh/authorized_keys"
+else
+    bashio::log.warning \
+        "No authorized_keys configured — you will not be able to SSH in" \
+        "as ${PRIMARY_USER} until you add one in the add-on configuration."
+fi
+
+# ------------------------------------------------------------------------
+# Render smb.conf: static HA-folder shares, plus one share per local user
+# that has a home directory under ${HOME_ROOT}
+# ------------------------------------------------------------------------
+hostname=$(bashio::info.hostname) || hostname=""
+if bashio::var.is_empty "${hostname}"; then
+    hostname="linuxbox"
+fi
+HOSTNAME="${hostname}"
+bashio::log.info "Hostname: ${HOSTNAME}"
+
+workgroup=$(bashio::config 'workgroup') || workgroup="WORKGROUP"
+jq -n --arg workgroup "${workgroup}" '{workgroup: $workgroup}' \
+    | tempio -template /usr/share/tempio/smb-base.gtpl -out /etc/samba/smb.conf \
+    || bashio::log.warning "Failed to render smb.conf — Samba will not start correctly"
+
+for dir in "${HOME_ROOT}"/*/; do
+    [[ -d "${dir}" ]] || continue
+    user=$(basename "${dir}")
+    if getent passwd "${user}" >/dev/null 2>&1; then
+        jq -n --arg username "${user}" --arg path "${dir%/}" \
+            '{username: $username, path: $path}' \
+            | tempio -template /usr/share/tempio/smb-home-share.gtpl \
+                -out "/tmp/smb-home-${user}.conf" \
+            && cat "/tmp/smb-home-${user}.conf" >> /etc/samba/smb.conf
+    fi
+done
+rm -f /tmp/smb-home-*.conf
+
+# ------------------------------------------------------------------------
+# Persist current state so it survives the next add-on update. Non-fatal:
+# sshd/smbd should still start even if this snapshot step has a problem.
+# ------------------------------------------------------------------------
+/usr/local/bin/persist-accounts || bashio::log.warning "persist-accounts failed"
+
+exit 0

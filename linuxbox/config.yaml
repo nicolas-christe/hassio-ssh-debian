@@ -1,0 +1,27 @@
+---
+version: "0.1.0"
+slug: linuxbox
+name: Linux Box
+description: Personal Debian SSH + Samba box with persistent multi-user accounts
+url: https://github.com/nicolas-christe/hassio-ssh-debian
+arch:
+  - aarch64
+host_network: true
+hassio_api: true
+init: false
+map:
+  - homeassistant_config:rw
+  - local_apps:rw
+  - all_app_configs:rw
+  - ssl:rw
+  - share:rw
+  - backup:rw
+  - media:rw
+options:
+  authorized_keys: []
+  workgroup: WORKGROUP
+schema:
+  authorized_keys:
+    - str
+  workgroup: str
+startup: services

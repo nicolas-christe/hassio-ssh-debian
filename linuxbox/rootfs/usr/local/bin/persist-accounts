@@ -1,0 +1,63 @@
+#!/bin/bash
+# Snapshot human accounts (uid/gid >= 1000), sudo group membership, and the
+# Samba password database into the add-on's persistent /data volume, so
+# they survive the next add-on update.
+#
+# Only human accounts are captured — never the base image's system
+# accounts (root, sshd's privsep user, _apt, etc.) — so restoring on a
+# future, newer base image can only ADD entries, never overwrite ones the
+# new image expects to exist.
+#
+# Run this after any manual account change (useradd, smbpasswd -a, passwd,
+# usermod, deluser, ...) — for example after adding a new user like "bob":
+#
+#   sudo useradd --create-home --home-dir /share/linux-box/home/bob \
+#       --shell /bin/bash bob
+#   sudo passwd bob
+#   sudo smbpasswd -a bob
+#   sudo persist-accounts
+#
+# Until you run this, a fresh account only exists in the running container —
+# an add-on rebuild/update would lose it.
+
+readonly DATA_ACCOUNTS=/data/accounts
+readonly SAMBA_PRIVATE=/var/lib/samba/private
+
+mkdir -p "${DATA_ACCOUNTS}" "${DATA_ACCOUNTS}/samba-private"
+
+new_passwd=$(awk -F: '$3 >= 1000 { print }' /etc/passwd)
+
+if [[ -z "${new_passwd}" ]]; then
+    echo "No human accounts (uid >= 1000) found on this system — not" >&2
+    echo "touching the existing snapshot in ${DATA_ACCOUNTS} (if any)." >&2
+    exit 1
+fi
+
+printf '%s\n' "${new_passwd}" > "${DATA_ACCOUNTS}/human-passwd.new"
+
+: > "${DATA_ACCOUNTS}/human-shadow.new"
+while IFS=: read -r name _; do
+    grep -m1 "^${name}:" /etc/shadow >> "${DATA_ACCOUNTS}/human-shadow.new"
+done < "${DATA_ACCOUNTS}/human-passwd.new"
+
+awk -F: '$3 >= 1000 { print }' /etc/group > "${DATA_ACCOUNTS}/human-group.new"
+
+: > "${DATA_ACCOUNTS}/human-gshadow.new"
+while IFS=: read -r name _; do
+    grep -m1 "^${name}:" /etc/gshadow >> "${DATA_ACCOUNTS}/human-gshadow.new"
+done < "${DATA_ACCOUNTS}/human-group.new"
+
+getent group sudo | cut -d: -f4 | tr ',' '\n' | grep -v '^$' \
+    > "${DATA_ACCOUNTS}/sudo-users.new"
+
+mv -f "${DATA_ACCOUNTS}/human-passwd.new" "${DATA_ACCOUNTS}/human-passwd"
+mv -f "${DATA_ACCOUNTS}/human-shadow.new" "${DATA_ACCOUNTS}/human-shadow"
+mv -f "${DATA_ACCOUNTS}/human-group.new" "${DATA_ACCOUNTS}/human-group"
+mv -f "${DATA_ACCOUNTS}/human-gshadow.new" "${DATA_ACCOUNTS}/human-gshadow"
+mv -f "${DATA_ACCOUNTS}/sudo-users.new" "${DATA_ACCOUNTS}/sudo-users"
+
+if [[ -d "${SAMBA_PRIVATE}" ]]; then
+    cp -a "${SAMBA_PRIVATE}/." "${DATA_ACCOUNTS}/samba-private/"
+fi
+
+echo "Account state persisted to ${DATA_ACCOUNTS}"

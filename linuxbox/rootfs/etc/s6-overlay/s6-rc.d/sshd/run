@@ -1,0 +1,8 @@
+#!/command/with-contenv bashio
+# vim: ft=bash
+# shellcheck shell=bash
+# ==============================================================================
+# Start sshd
+# ==============================================================================
+bashio::log.info "Starting the SSH daemon..."
+exec /usr/sbin/sshd -D -e

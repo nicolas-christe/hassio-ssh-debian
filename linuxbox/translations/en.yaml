@@ -1,0 +1,10 @@
+---
+configuration:
+  authorized_keys:
+    name: Authorized Keys
+    description: >-
+      Public keys accepted for SSH login as the "nicolas" user. Required to
+      log in — password login is disabled.
+  workgroup:
+    name: Workgroup
+    description: Change WORKGROUP to reflect your network needs.
