@@ -10,6 +10,7 @@ RUN \
         sudo \
         samba \
         samba-common-bin \
+        samba-vfs-modules \
         smbclient \
         avahi-daemon \
     && apt-get clean \
