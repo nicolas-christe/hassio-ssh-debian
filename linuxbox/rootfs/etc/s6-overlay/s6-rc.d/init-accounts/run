@@ -8,6 +8,8 @@
 # smbpasswd, same as any other account; see persist-accounts.
 # ==============================================================================
 declare hostname
+declare custom_hostname
+declare mdns_hostname
 declare workgroup
 export HOSTNAME
 
@@ -118,15 +120,32 @@ else
 fi
 
 # ------------------------------------------------------------------------
+# Determine hostname: an explicit add-on config value wins outright (used
+# as-is for both Samba's netbios name and the mDNS name, no suffix — the
+# user is taking responsibility for picking something that won't collide).
+# Otherwise fall back to Home Assistant's own hostname, with "-linuxbox"
+# appended for mDNS to avoid clashing with HA OS's own avahi-daemon
+# advertising that same plain name on the same shared network namespace.
+# ------------------------------------------------------------------------
+custom_hostname=$(bashio::config 'hostname') || custom_hostname=""
+if bashio::var.has_value "${custom_hostname}"; then
+    HOSTNAME="${custom_hostname}"
+    mdns_hostname="${custom_hostname}"
+    bashio::log.info "Hostname: ${HOSTNAME} (from add-on config)"
+else
+    hostname=$(bashio::info.hostname) || hostname=""
+    if bashio::var.is_empty "${hostname}"; then
+        hostname="linuxbox"
+    fi
+    HOSTNAME="${hostname}"
+    mdns_hostname="${HOSTNAME}-linuxbox"
+    bashio::log.info "Hostname: ${HOSTNAME} (from Home Assistant, mDNS as ${mdns_hostname})"
+fi
+
+# ------------------------------------------------------------------------
 # Render smb.conf: static HA-folder shares, plus one share per local user
 # that has a home directory under ${HOME_ROOT}
 # ------------------------------------------------------------------------
-hostname=$(bashio::info.hostname) || hostname=""
-if bashio::var.is_empty "${hostname}"; then
-    hostname="linuxbox"
-fi
-HOSTNAME="${hostname}"
-bashio::log.info "Hostname: ${HOSTNAME}"
 
 workgroup=$(bashio::config 'workgroup') || workgroup="WORKGROUP"
 jq -n --arg workgroup "${workgroup}" '{workgroup: $workgroup}' \
@@ -145,6 +164,20 @@ for dir in "${HOME_ROOT}"/*/; do
     fi
 done
 rm -f /tmp/smb-home-*.conf
+
+# ------------------------------------------------------------------------
+# Avahi (mDNS/Bonjour): advertise Samba and SSH so they show up in
+# macOS Finder / Bonjour discovery. mdns_hostname was determined above —
+# either the user's explicit "hostname" config value, or an auto-derived
+# name distinct from Home Assistant OS's own avahi-daemon (which shares
+# this same network namespace via host_network: true).
+# ------------------------------------------------------------------------
+sed -i \
+    -e "s/^#\?host-name=.*/host-name=${mdns_hostname}/" \
+    -e "s/^#\?enable-dbus=.*/enable-dbus=no/" \
+    /etc/avahi/avahi-daemon.conf \
+    || bashio::log.warning "Failed to configure avahi-daemon"
+bashio::log.info "Advertising via mDNS as ${mdns_hostname}.local"
 
 # ------------------------------------------------------------------------
 # Persist current state so it survives the next add-on update. Non-fatal:

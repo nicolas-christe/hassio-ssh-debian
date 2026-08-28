@@ -11,6 +11,7 @@ RUN \
         samba \
         samba-common-bin \
         smbclient \
+        avahi-daemon \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /run/sshd /var/lib/samba/private \

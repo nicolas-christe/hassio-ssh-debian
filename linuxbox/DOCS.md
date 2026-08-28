@@ -27,9 +27,10 @@ Connect with:
 ssh nicolas@<your-ha-host>.local
 ```
 
-(or the host's IP address — `.local` resolution works because it shares
-Home Assistant OS's own network stack and hostname, not because this add-on
-runs its own mDNS responder).
+(or the host's IP address — `<your-ha-host>.local` resolves via Home
+Assistant OS's own mDNS responder, since this add-on shares its network
+stack; that's separate from this add-on's own mDNS advertisement — see
+"mDNS / Bonjour discovery" below).
 
 Samba access isn't set up by the add-on config — set `nicolas`'s Samba
 password once you're in over SSH:
@@ -48,6 +49,27 @@ smb://<your-ha-host>.local/share
 Available shares: `config`, `local_apps`, `app_configs`, `ssl`, `share`,
 `backup`, `media` (same paths as the official Samba add-on), plus a
 `nicolas` share for the home directory.
+
+## mDNS / Bonjour discovery
+
+This add-on runs its own `avahi-daemon` (host_network gives it access to
+the real LAN interfaces), advertising both Samba (`_smb._tcp`) and SSH
+(`_ssh._tcp`). The Samba share now shows up automatically in Finder's
+**Network** sidebar — no need to type `smb://` manually.
+
+By default it advertises as `<your-ha-hostname>-linuxbox.local`, not plain
+`<your-ha-hostname>.local` — deliberately distinct, since Home Assistant OS
+almost certainly already runs its own avahi-daemon claiming that exact
+name, and this add-on shares the same network namespace (`host_network:
+true`) so it would otherwise collide. Set the `hostname` option in the
+add-on config to override this — that value is used exactly as typed, for
+both the mDNS name and Samba's netbios name, with no suffix added; pick
+something that won't collide with anything else on your LAN. SSH's
+`_ssh._tcp` advertisement isn't
+shown anywhere in Finder's UI (Finder only browses SMB/AFP-type shares) —
+it's there for other Bonjour-aware tools (e.g. `dns-sd -B _ssh._tcp`,
+Discovery.app), not required for `ssh nicolas@<host>.local` to work, which
+already works via Home Assistant OS's own mDNS responder.
 
 ## Home directories
 

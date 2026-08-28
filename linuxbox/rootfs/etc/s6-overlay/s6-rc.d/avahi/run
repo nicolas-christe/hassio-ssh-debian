@@ -1,0 +1,8 @@
+#!/command/with-contenv bashio
+# vim: ft=bash
+# shellcheck shell=bash
+# ==============================================================================
+# Start avahi-daemon (mDNS/Bonjour advertisement for Samba and SSH)
+# ==============================================================================
+bashio::log.info "Starting avahi-daemon..."
+exec avahi-daemon --no-chroot

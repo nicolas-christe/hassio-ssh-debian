@@ -1,0 +1,8 @@
+#!/command/with-contenv bashio
+# vim: ft=bash
+# shellcheck shell=bash
+# ==============================================================================
+# avahi-daemon is nice-to-have (mDNS discovery), not core to SSH/Samba
+# working — log and let s6 respawn it, don't take the whole container down.
+# ==============================================================================
+bashio::log.warning "avahi-daemon exited with code ${1} (signal ${2}), restarting"

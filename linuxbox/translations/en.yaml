@@ -5,6 +5,15 @@ configuration:
     description: >-
       Public keys accepted for SSH login as the "nicolas" user. Required to
       log in — password login is disabled.
+  hostname:
+    name: Hostname
+    description: >-
+      Name this box advertises as, for Samba (netbios name) and mDNS/Bonjour
+      (shows as "<hostname>.local" in Finder). Leave empty to auto-derive
+      one from your Home Assistant hostname with a "-linuxbox" suffix
+      (avoids clashing with Home Assistant OS's own mDNS name on the same
+      network). Setting this overrides that suffix entirely — pick
+      something that won't collide with any other device on your LAN.
   workgroup:
     name: Workgroup
     description: Change WORKGROUP to reflect your network needs.

@@ -19,9 +19,11 @@ map:
   - media:rw
 options:
   authorized_keys: []
+  hostname: ""
   workgroup: WORKGROUP
 schema:
   authorized_keys:
     - str
+  hostname: str?
   workgroup: str
 startup: services
