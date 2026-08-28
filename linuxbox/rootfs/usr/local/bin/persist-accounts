@@ -1,7 +1,8 @@
 #!/bin/bash
-# Snapshot human accounts (uid/gid >= 1000), sudo group membership, and the
-# Samba password database into the add-on's persistent /data volume, so
-# they survive the next add-on update.
+# Snapshot human accounts (uid/gid >= 1000), membership in the low-gid
+# system groups listed in AUX_GROUPS (sudo, dialout), and the Samba
+# password database into the add-on's persistent /data volume, so they
+# survive the next add-on update.
 #
 # Only human accounts are captured — never the base image's system
 # accounts (root, sshd's privsep user, _apt, etc.) — so restoring on a
@@ -22,6 +23,9 @@
 
 readonly DATA_ACCOUNTS=/data/accounts
 readonly SAMBA_PRIVATE=/var/lib/samba/private
+# Low-gid system groups whose *membership* we care about persisting (their
+# own /etc/group line is never touched — only who's listed as a member).
+readonly AUX_GROUPS=(sudo dialout)
 
 mkdir -p "${DATA_ACCOUNTS}" "${DATA_ACCOUNTS}/samba-private"
 
@@ -47,14 +51,18 @@ while IFS=: read -r name _; do
     grep -m1 "^${name}:" /etc/gshadow >> "${DATA_ACCOUNTS}/human-gshadow.new"
 done < "${DATA_ACCOUNTS}/human-group.new"
 
-getent group sudo | cut -d: -f4 | tr ',' '\n' | grep -v '^$' \
-    > "${DATA_ACCOUNTS}/sudo-users.new"
+for grp in "${AUX_GROUPS[@]}"; do
+    getent group "${grp}" | cut -d: -f4 | tr ',' '\n' | grep -v '^$' \
+        > "${DATA_ACCOUNTS}/${grp}-users.new"
+done
 
 mv -f "${DATA_ACCOUNTS}/human-passwd.new" "${DATA_ACCOUNTS}/human-passwd"
 mv -f "${DATA_ACCOUNTS}/human-shadow.new" "${DATA_ACCOUNTS}/human-shadow"
 mv -f "${DATA_ACCOUNTS}/human-group.new" "${DATA_ACCOUNTS}/human-group"
 mv -f "${DATA_ACCOUNTS}/human-gshadow.new" "${DATA_ACCOUNTS}/human-gshadow"
-mv -f "${DATA_ACCOUNTS}/sudo-users.new" "${DATA_ACCOUNTS}/sudo-users"
+for grp in "${AUX_GROUPS[@]}"; do
+    mv -f "${DATA_ACCOUNTS}/${grp}-users.new" "${DATA_ACCOUNTS}/${grp}-users"
+done
 
 if [[ -d "${SAMBA_PRIVATE}" ]]; then
     cp -a "${SAMBA_PRIVATE}/." "${DATA_ACCOUNTS}/samba-private/"

@@ -9,6 +9,8 @@ arch:
 host_network: true
 hassio_api: true
 init: false
+usb: true
+udev: true
 map:
   - homeassistant_config:rw
   - local_apps:rw

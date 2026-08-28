@@ -13,6 +13,7 @@ RUN \
         samba-vfs-modules \
         smbclient \
         avahi-daemon \
+        usbutils \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /run/sshd /var/lib/samba/private \

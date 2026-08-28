@@ -18,6 +18,10 @@ readonly DATA_ACCOUNTS=/data/accounts
 readonly SAMBA_PRIVATE=/var/lib/samba/private
 readonly SSH_HOST_KEYS=/data/ssh_host_keys
 readonly PRIMARY_USER=nicolas
+# Low-gid system groups the primary user belongs to; must match
+# persist-accounts' AUX_GROUPS. dialout owns serial device nodes
+# (/dev/ttyUSB*, /dev/ttyACM*) — needed for USB-serial flashing tools.
+readonly AUX_GROUPS=(sudo dialout)
 
 mkdir -p "${HOME_ROOT}" "${DATA_ACCOUNTS}" "${DATA_ACCOUNTS}/samba-private" "${SSH_HOST_KEYS}"
 
@@ -54,12 +58,13 @@ if [[ -f "${DATA_ACCOUNTS}/human-passwd" ]]; then
     done < "${DATA_ACCOUNTS}/human-gshadow"
 fi
 
-if [[ -f "${DATA_ACCOUNTS}/sudo-users" ]]; then
+for grp in "${AUX_GROUPS[@]}"; do
+    [[ -f "${DATA_ACCOUNTS}/${grp}-users" ]] || continue
     while IFS= read -r user; do
         [[ -z "${user}" ]] && continue
-        id "${user}" >/dev/null 2>&1 && usermod -aG sudo "${user}"
-    done < "${DATA_ACCOUNTS}/sudo-users"
-fi
+        id "${user}" >/dev/null 2>&1 && usermod -aG "${grp}" "${user}"
+    done < "${DATA_ACCOUNTS}/${grp}-users"
+done
 
 if [[ -n "$(ls -A "${DATA_ACCOUNTS}/samba-private" 2>/dev/null)" ]]; then
     cp -a "${DATA_ACCOUNTS}/samba-private/." "${SAMBA_PRIVATE}/"
@@ -86,13 +91,16 @@ if ! id "${PRIMARY_USER}" &>/dev/null; then
     bashio::log.info "Creating user ${PRIMARY_USER}..."
     useradd \
         --create-home --home-dir "${HOME_ROOT}/${PRIMARY_USER}" \
-        --shell /bin/bash --groups sudo \
+        --shell /bin/bash \
+        --groups "$(IFS=,; echo "${AUX_GROUPS[*]}")" \
         "${PRIMARY_USER}" \
         || bashio::exit.nok "Failed to create user ${PRIMARY_USER}"
     passwd -l "${PRIMARY_USER}" >/dev/null
 fi
 
-usermod -aG sudo "${PRIMARY_USER}"
+for grp in "${AUX_GROUPS[@]}"; do
+    usermod -aG "${grp}" "${PRIMARY_USER}"
+done
 
 mkdir -p "${HOME_ROOT}/${PRIMARY_USER}/.ssh"
 chown "${PRIMARY_USER}:${PRIMARY_USER}" "${HOME_ROOT}/${PRIMARY_USER}" "${HOME_ROOT}/${PRIMARY_USER}/.ssh"
