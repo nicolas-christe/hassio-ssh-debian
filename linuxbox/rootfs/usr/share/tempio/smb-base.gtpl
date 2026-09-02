@@ -30,6 +30,7 @@
    vfs objects = catia fruit streams_xattr
    fruit:aapl = yes
    fruit:nfs_aces = no
+   fruit:metadata = stream
    veto files = /._*/.DS_Store/Thumbs.db/icon?/.Trashes/
    delete veto files = yes
 
@@ -42,6 +43,7 @@
    vfs objects = catia fruit streams_xattr
    fruit:aapl = yes
    fruit:nfs_aces = no
+   fruit:metadata = stream
    veto files = /._*/.DS_Store/Thumbs.db/icon?/.Trashes/
    delete veto files = yes
 
@@ -54,6 +56,7 @@
    vfs objects = catia fruit streams_xattr
    fruit:aapl = yes
    fruit:nfs_aces = no
+   fruit:metadata = stream
    veto files = /._*/.DS_Store/Thumbs.db/icon?/.Trashes/
    delete veto files = yes
 
@@ -66,6 +69,7 @@
    vfs objects = catia fruit streams_xattr
    fruit:aapl = yes
    fruit:nfs_aces = no
+   fruit:metadata = stream
    veto files = /._*/.DS_Store/Thumbs.db/icon?/.Trashes/
    delete veto files = yes
 
@@ -78,6 +82,7 @@
    vfs objects = catia fruit streams_xattr
    fruit:aapl = yes
    fruit:nfs_aces = no
+   fruit:metadata = stream
    veto files = /._*/.DS_Store/Thumbs.db/icon?/.Trashes/
    delete veto files = yes
 
@@ -91,6 +96,7 @@
    vfs objects = catia fruit streams_xattr
    fruit:aapl = yes
    fruit:nfs_aces = no
+   fruit:metadata = stream
    veto files = /._*/.DS_Store/Thumbs.db/icon?/.Trashes/
    delete veto files = yes
 
@@ -104,5 +110,6 @@
    vfs objects = catia fruit streams_xattr
    fruit:aapl = yes
    fruit:nfs_aces = no
+   fruit:metadata = stream
    veto files = /._*/.DS_Store/Thumbs.db/icon?/.Trashes/
    delete veto files = yes
