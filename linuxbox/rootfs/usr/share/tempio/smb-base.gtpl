@@ -8,6 +8,9 @@
    idmap config * : backend = tdb
    idmap config * : range = 1000000-2000000
 
+   min protocol = SMB2
+   ea support = yes
+
    load printers = no
    disable spoolss = yes
 
@@ -31,8 +34,10 @@
    fruit:aapl = yes
    fruit:nfs_aces = no
    fruit:metadata = stream
-   veto files = /._*/.DS_Store/Thumbs.db/icon?/.Trashes/
-   delete veto files = yes
+   fruit:veto_appledouble = no
+   fruit:wipe_intentionally_left_blank_rfork = yes
+   fruit:delete_empty_adfiles = yes
+   fruit:model = MacSamba
 
 [local_apps]
    browseable = yes
@@ -44,8 +49,10 @@
    fruit:aapl = yes
    fruit:nfs_aces = no
    fruit:metadata = stream
-   veto files = /._*/.DS_Store/Thumbs.db/icon?/.Trashes/
-   delete veto files = yes
+   fruit:veto_appledouble = no
+   fruit:wipe_intentionally_left_blank_rfork = yes
+   fruit:delete_empty_adfiles = yes
+   fruit:model = MacSamba
 
 [app_configs]
    browseable = yes
@@ -57,8 +64,10 @@
    fruit:aapl = yes
    fruit:nfs_aces = no
    fruit:metadata = stream
-   veto files = /._*/.DS_Store/Thumbs.db/icon?/.Trashes/
-   delete veto files = yes
+   fruit:veto_appledouble = no
+   fruit:wipe_intentionally_left_blank_rfork = yes
+   fruit:delete_empty_adfiles = yes
+   fruit:model = MacSamba
 
 [ssl]
    browseable = yes
@@ -70,8 +79,10 @@
    fruit:aapl = yes
    fruit:nfs_aces = no
    fruit:metadata = stream
-   veto files = /._*/.DS_Store/Thumbs.db/icon?/.Trashes/
-   delete veto files = yes
+   fruit:veto_appledouble = no
+   fruit:wipe_intentionally_left_blank_rfork = yes
+   fruit:delete_empty_adfiles = yes
+   fruit:model = MacSamba
 
 [share]
    browseable = yes
@@ -83,8 +94,10 @@
    fruit:aapl = yes
    fruit:nfs_aces = no
    fruit:metadata = stream
-   veto files = /._*/.DS_Store/Thumbs.db/icon?/.Trashes/
-   delete veto files = yes
+   fruit:veto_appledouble = no
+   fruit:wipe_intentionally_left_blank_rfork = yes
+   fruit:delete_empty_adfiles = yes
+   fruit:model = MacSamba
 
 [backup]
    browseable = yes
@@ -97,8 +110,10 @@
    fruit:aapl = yes
    fruit:nfs_aces = no
    fruit:metadata = stream
-   veto files = /._*/.DS_Store/Thumbs.db/icon?/.Trashes/
-   delete veto files = yes
+   fruit:veto_appledouble = no
+   fruit:wipe_intentionally_left_blank_rfork = yes
+   fruit:delete_empty_adfiles = yes
+   fruit:model = MacSamba
 
 [media]
    browseable = yes
@@ -111,5 +126,7 @@
    fruit:aapl = yes
    fruit:nfs_aces = no
    fruit:metadata = stream
-   veto files = /._*/.DS_Store/Thumbs.db/icon?/.Trashes/
-   delete veto files = yes
+   fruit:veto_appledouble = no
+   fruit:wipe_intentionally_left_blank_rfork = yes
+   fruit:delete_empty_adfiles = yes
+   fruit:model = MacSamba
