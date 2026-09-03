@@ -26,6 +26,27 @@ readonly AUX_GROUPS=(sudo dialout)
 mkdir -p "${HOME_ROOT}" "${DATA_ACCOUNTS}" "${DATA_ACCOUNTS}/samba-private" "${SSH_HOST_KEYS}"
 
 # ------------------------------------------------------------------------
+# HAOS's host (buildroot-based) uses gid 18 for dialout, but this image's
+# base Debian assigns dialout gid 20 — a well-known HAOS/container gid
+# mismatch (see home-assistant/operating-system#1878 and the "wrong
+# dialout GID in HAOS" community thread). /dev/ttyUSB*/ttyACM* nodes are
+# bind-mounted from the host, so their group ownership is always 18
+# regardless of what this container's own /etc/group says. Force dialout
+# to gid 18 so membership actually grants access to those device nodes.
+# Only remap if nothing else already holds gid 18 or if dialout is
+# already correct, to stay a no-op on any base image that doesn't clash.
+# ------------------------------------------------------------------------
+current_dialout_gid=$(getent group dialout | cut -d: -f3)
+if [[ "${current_dialout_gid}" != "18" ]]; then
+    if ! getent group 18 >/dev/null 2>&1; then
+        groupmod -g 18 dialout \
+            || bashio::log.warning "Failed to remap dialout to gid 18 — USB-serial devices may be inaccessible"
+    else
+        bashio::log.warning "gid 18 already in use by another group — dialout stays at ${current_dialout_gid}, USB-serial devices may be inaccessible"
+    fi
+fi
+
+# ------------------------------------------------------------------------
 # Restore persisted human accounts (uid/gid >= 1000) from a previous boot.
 # This only ever ADDS lines for names missing from the current /etc files —
 # it never overwrites them — so a newer base image's system accounts
