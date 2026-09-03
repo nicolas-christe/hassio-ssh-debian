@@ -8,5 +8,7 @@
    fruit:aapl = yes
    fruit:nfs_aces = no
    fruit:metadata = stream
-   veto files = /._*/.DS_Store/Thumbs.db/icon?/.Trashes/
-   delete veto files = yes
+   fruit:veto_appledouble = no
+   fruit:wipe_intentionally_left_blank_rfork = yes
+   fruit:delete_empty_adfiles = yes
+   fruit:model = MacSamba
