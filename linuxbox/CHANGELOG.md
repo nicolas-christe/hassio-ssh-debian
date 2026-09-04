@@ -8,3 +8,8 @@
   socket access.
 - Add an optional `smb_password` add-on config option to set `nicolas`'s
   Samba password on every start, instead of requiring `smbpasswd` over SSH.
+- Image now bundles ESP-IDF's `eim` installation manager (from Espressif's
+  own apt repo) plus its apt-level build prerequisites (`flex`, `bison`,
+  `gperf`, `ccache`, `dfu-util`, `cmake`, `wget`, `libffi-dev`,
+  `libssl-dev`), so ESP-IDF tooling survives an add-on rebuild instead of
+  needing manual reinstallation.

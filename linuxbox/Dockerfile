@@ -14,6 +14,22 @@ RUN \
         smbclient \
         avahi-daemon \
         usbutils \
+        gnupg \
+        flex \
+        bison \
+        gperf \
+        ccache \
+        dfu-util \
+        cmake \
+        wget \
+        libffi-dev \
+        libssl-dev \
+    && install -d -m 0755 /etc/apt/keyrings \
+    && curl -fsSL https://dl.espressif.com/dl/eim/eim.asc | gpg --dearmor -o /etc/apt/keyrings/eim.gpg \
+    && printf 'Types: deb\nURIs: https://dl.espressif.com/dl/eim/apt\nSuites: stable\nComponents: main\nSigned-By: /etc/apt/keyrings/eim.gpg\n' \
+        > /etc/apt/sources.list.d/eim.sources \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends eim-cli \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /run/sshd /var/lib/samba/private \
