@@ -17,3 +17,10 @@ configuration:
   workgroup:
     name: Workgroup
     description: Change WORKGROUP to reflect your network needs.
+  smb_password:
+    name: Samba Password
+    description: >-
+      Samba password for the "nicolas" user, applied on every start. Leave
+      empty to manage it manually over SSH with smbpasswd instead (see
+      DOCS.md) — this only ever sets/overwrites the password when given a
+      value, it never clears an existing one.

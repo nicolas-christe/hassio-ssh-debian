@@ -32,8 +32,9 @@ Assistant OS's own mDNS responder, since this add-on shares its network
 stack; that's separate from this add-on's own mDNS advertisement — see
 "mDNS / Bonjour discovery" below).
 
-Samba access isn't set up by the add-on config — set `nicolas`'s Samba
-password once you're in over SSH:
+Set `nicolas`'s Samba password by filling in `smb_password` in the add-on
+config (applied on every start) — or, if you'd rather not put it in the
+config, over SSH instead:
 
 ```bash
 sudo smbpasswd -a nicolas
@@ -135,8 +136,8 @@ or the change will be lost the next time the add-on updates.
   search still works, just client-side.
 - **No NetBIOS (`nmbd`) or WS-Discovery (`wsdd`).** Neither matters for a
   Mac-only setup; connect by hostname (`.local`) or IP.
-- **No config-UI user or Samba-password management.** Deliberately simple:
-  only SSH `authorized_keys` for `nicolas` comes from the add-on config.
-  Every account (including `nicolas`'s own Samba password) is set the same
-  way, manually over SSH — `useradd`/`passwd`/`smbpasswd` + a
-  `persist-accounts` call.
+- **No config-UI user management.** Deliberately simple: only SSH
+  `authorized_keys` and Samba `smb_password` for `nicolas` come from the
+  add-on config. Every other account — and `nicolas`'s own Linux login
+  password, if you want one — is set the same way, manually over SSH —
+  `useradd`/`passwd`/`smbpasswd` + a `persist-accounts` call.
