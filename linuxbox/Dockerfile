@@ -14,6 +14,7 @@ RUN \
         smbclient \
         avahi-daemon \
         usbutils \
+        gh \
         gnupg \
         flex \
         bison \

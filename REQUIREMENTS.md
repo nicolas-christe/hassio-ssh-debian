@@ -37,7 +37,7 @@ must be uninstalled/stopped first, since this add-on binds the same ports
 ## Filesystem / volumes
 
 - Standard HA add-on folders mapped in via `config.yaml`'s `map:` keys:
-  `homeassistant_config:rw`, `addons:rw`, `all_addon_configs:rw`, `ssl:rw`,
+  `homeassistant_config:rw`, `local_apps:rw`, `all_app_configs:rw`, `ssl:rw`,
   `share:rw`, `backup:rw`, `media:rw` (paths appear inside the container at
   `/homeassistant`, `/local_apps`, `/app_configs`, `/ssl`, `/share`,
   `/backup`, `/media` respectively).
@@ -64,10 +64,48 @@ must be uninstalled/stopped first, since this add-on binds the same ports
 
 ## Packages
 
-- Minimal image: just what's needed to run `sshd` (`openssh-server`, `sudo`).
-- No extra CLI/network/Python tooling preinstalled at this stage — added
-  later as needed via `apt` inside the running container or by editing the
-  Dockerfile.
+The image has grown from its original "just enough for sshd" scope into a
+personal dev box, since the whole point of persistent per-user home
+directories (see "Account / state persistence") is to survive add-on
+rebuilds — anything installed by hand into the container's own root
+filesystem instead does not. Bundled in the Dockerfile itself:
+
+- SSH/Samba core: `openssh-server`, `sudo`, `samba`, `samba-common-bin`,
+  `samba-vfs-modules`, `smbclient`, `avahi-daemon`.
+- `usbutils` — `lsusb` etc., for diagnosing USB-serial adapters (see "USB /
+  serial device access" below).
+- `gh` — GitHub CLI, so `git push`/PR workflows over SSH-authenticated
+  HTTPS work out of the box after a rebuild without reinstalling it by hand.
+- ESP-IDF tooling: `eim-cli` (Espressif's IDF Installation Manager, from
+  Espressif's own apt repo) plus its build prerequisites (`gnupg`, `flex`,
+  `bison`, `gperf`, `ccache`, `dfu-util`, `cmake`, `wget`, `libffi-dev`,
+  `libssl-dev`) — `eim` itself still installs ESP-IDF under each user's own
+  `$HOME/.espressif`, which persists on its own; only the apt-level
+  prerequisites needed to be baked into the image.
+- Swift toolchain build prerequisites (managed per-user via `swiftly`,
+  itself under `$HOME`): `binutils-gold`, `gcc`, `libcurl4-openssl-dev`,
+  `libedit-dev`, `libicu-dev`, `libncurses-dev`, `libpython3-dev`,
+  `libsqlite3-dev`, `libxml2-dev`, `pkg-config`, `uuid-dev`.
+- Anything else installed by hand into a running container (e.g. `git`,
+  `htop`, `nano`) is **not** baked into the image and does not survive a
+  rebuild — see each user's own reinstall notes for what to redo.
+
+## USB / serial device access
+
+- `usb: true` + `udev: true` in `config.yaml` cover USB bus discovery and
+  hotplug events, but not the cgroup passthrough for the resulting
+  `/dev/ttyUSB*`/`/dev/ttyACM*` character devices themselves — `uart: true`
+  is the additional flag needed for Supervisor to actually grant that (added
+  in 0.1.1; without it, even `root` inside the add-on gets `EPERM` opening
+  those devices, regardless of `dialout` group permissions on the node).
+- HAOS's host (buildroot-based) uses gid 18 for `dialout`, but Debian's own
+  base image assigns gid 20 — a well-known HAOS/container gid mismatch. The
+  add-on's account-init step (`init-accounts`) force-remaps the container's
+  `dialout` group to gid 18 (only if nothing else already holds it) so that
+  ownership of `/dev/ttyUSB*`/`/dev/ttyACM*` — which is whatever the *host*
+  kernel assigned — lines up correctly for the container's own `dialout`
+  members, regardless of what this container's own `/etc/group` originally
+  said.
 
 ## Samba
 

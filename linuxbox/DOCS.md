@@ -123,6 +123,44 @@ password. Run `sudo persist-accounts` after every `useradd`, `passwd`,
 `smbpasswd -a`, or `deluser` you run by hand (for `nicolas` or anyone else),
 or the change will be lost the next time the add-on updates.
 
+## Dev tooling bundled in the image
+
+Beyond SSH/Samba, the image bundles apt packages that a user's own home
+directory alone can't provide, because only paths under `/share`,
+`/homeassistant`, `/local_apps`, `/app_configs`, `/ssl`, `/backup`, `/media`
+and `/data` survive an add-on rebuild — anything installed into the
+container's own root filesystem by hand (`apt-get install` in a live SSH
+session) does not:
+
+- `gh` — GitHub CLI, so `git push`/pull-request workflows over an
+  SSH-authenticated `gh auth login` work immediately after a rebuild.
+- ESP-IDF's `eim-cli` (Espressif's Installation Manager) plus its apt-level
+  build prerequisites — `eim` itself installs each ESP-IDF version under
+  the user's own `$HOME/.espressif`, which persists on its own; only the
+  system packages `eim` needs to build things were missing before.
+- The Debian packages the Swift toolchain (managed per-user via `swiftly`,
+  also under `$HOME`) needs to actually build and run code.
+
+Anything else you `apt-get install` by hand into a running container (e.g.
+`git`, `htop`) is lost on the next rebuild — keep your own note of what to
+reinstall, since there's no add-on-level mechanism for that.
+
+## USB-serial devices (e.g. flashing/monitoring an ESP32 board)
+
+The add-on requests `usb: true`, `udev: true`, and `uart: true` in
+`config.yaml` so `/dev/ttyUSB*`/`/dev/ttyACM*` devices plugged into the
+host are accessible inside the container (`uart` specifically — `usb`/
+`udev` alone cover bus discovery and hotplug events, not the character
+device passthrough itself). `nicolas` (and any user you add) is a member
+of the `dialout` group, which the add-on's startup step force-aligns to
+gid 18 to match HAOS's host convention, so the group actually owns those
+device nodes as seen from inside the container.
+
+If you still get "Operation not permitted" opening a serial device after
+installing/updating the add-on, make sure you used **Rebuild**, not just
+**Restart** — a local add-on only re-reads `config.yaml`'s device-access
+flags on a rebuild.
+
 ## What this add-on deliberately doesn't do
 
 - **No Docker socket access.** `docker_api` in Home Assistant's add-on

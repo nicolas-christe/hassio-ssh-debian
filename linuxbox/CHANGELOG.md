@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.1
+
+- Add `uart: true` — `usb`/`udev` alone cover USB bus discovery and hotplug
+  events but not the cgroup passthrough for the resulting
+  `/dev/ttyUSB*`/`/dev/ttyACM*` character devices themselves; `uart` is the
+  dedicated flag Supervisor uses to grant that.
+- Image now bundles the GitHub CLI (`gh`), so it survives an add-on rebuild
+  instead of needing manual reinstallation.
+
 ## 0.1.0
 
 - Initial version: SSH (key-only, `nicolas` user with passwordless sudo) +
