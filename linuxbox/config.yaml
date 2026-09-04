@@ -23,9 +23,11 @@ options:
   authorized_keys: []
   hostname: ""
   workgroup: WORKGROUP
+  smb_password: ""
 schema:
   authorized_keys:
     - str
   hostname: str?
   workgroup: str
+  smb_password: password?
 startup: services

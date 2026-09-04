@@ -3,14 +3,16 @@
 # shellcheck shell=bash
 # ==============================================================================
 # Restore persisted account state, ensure the primary user exists, apply
-# add-on config (authorized_keys), and render smb.conf. Samba passwords for
-# every user — including the primary one — are set manually over SSH with
-# smbpasswd, same as any other account; see persist-accounts.
+# add-on config (authorized_keys, optionally smb_password), and render
+# smb.conf. Every other Samba password — and the primary user's own if
+# smb_password is left unset — is set manually over SSH with smbpasswd,
+# same as any other account; see persist-accounts.
 # ==============================================================================
 declare hostname
 declare custom_hostname
 declare mdns_hostname
 declare workgroup
+declare smb_password
 export HOSTNAME
 
 readonly HOME_ROOT=/share/linux-box/home
@@ -146,6 +148,20 @@ else
     bashio::log.warning \
         "No authorized_keys configured — you will not be able to SSH in" \
         "as ${PRIMARY_USER} until you add one in the add-on configuration."
+fi
+
+# ------------------------------------------------------------------------
+# Samba password for the primary user, from add-on config. Optional and
+# one-directional: a configured value is (re)applied on every start, but
+# clearing the config field never removes an already-set password — set
+# it manually over SSH with smbpasswd instead (same as any other user).
+# ------------------------------------------------------------------------
+if bashio::config.has_value 'smb_password'; then
+    bashio::log.info "Setting Samba password for ${PRIMARY_USER} from add-on config..."
+    smb_password=$(bashio::config 'smb_password')
+    printf '%s\n%s\n' "${smb_password}" "${smb_password}" \
+        | smbpasswd -s -a "${PRIMARY_USER}" >/dev/null \
+        || bashio::log.warning "Failed to set Samba password for ${PRIMARY_USER}"
 fi
 
 # ------------------------------------------------------------------------
