@@ -13,3 +13,8 @@
   `gperf`, `ccache`, `dfu-util`, `cmake`, `wget`, `libffi-dev`,
   `libssl-dev`), so ESP-IDF tooling survives an add-on rebuild instead of
   needing manual reinstallation.
+- Image now bundles Swift's toolchain build prerequisites (`binutils-gold`,
+  `gcc`, `libcurl4-openssl-dev`, `libedit-dev`, `libicu-dev`,
+  `libncurses-dev`, `libpython3-dev`, `libsqlite3-dev`, `libxml2-dev`,
+  `pkg-config`, `uuid-dev`), so `swift` keeps working after an add-on
+  rebuild instead of needing manual reinstallation.

@@ -24,6 +24,17 @@ RUN \
         wget \
         libffi-dev \
         libssl-dev \
+        binutils-gold \
+        gcc \
+        libcurl4-openssl-dev \
+        libedit-dev \
+        libicu-dev \
+        libncurses-dev \
+        libpython3-dev \
+        libsqlite3-dev \
+        libxml2-dev \
+        pkg-config \
+        uuid-dev \
     && install -d -m 0755 /etc/apt/keyrings \
     && curl -fsSL https://dl.espressif.com/dl/eim/eim.asc | gpg --dearmor -o /etc/apt/keyrings/eim.gpg \
     && printf 'Types: deb\nURIs: https://dl.espressif.com/dl/eim/apt\nSuites: stable\nComponents: main\nSigned-By: /etc/apt/keyrings/eim.gpg\n' \
