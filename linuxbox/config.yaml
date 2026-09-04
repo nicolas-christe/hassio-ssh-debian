@@ -1,5 +1,5 @@
 ---
-version: "0.1.0"
+version: "0.1.1"
 slug: linuxbox
 name: Linux Box
 description: Personal Debian SSH + Samba box with persistent multi-user accounts
@@ -11,6 +11,7 @@ hassio_api: true
 init: false
 usb: true
 udev: true
+uart: true
 map:
   - homeassistant_config:rw
   - local_apps:rw
